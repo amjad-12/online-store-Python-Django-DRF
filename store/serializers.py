@@ -1,4 +1,6 @@
 from decimal import Decimal
+from operator import concat
+
 from django.db import transaction
 from rest_framework import serializers
 from .signals import order_created
@@ -31,12 +33,26 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'slug', 'inventory',
                   'unit_price', 'price_with_tax', 'collection', 'images']
 
+    # concatenate = serializers.SerializerMethodField(
+    #     method_name='fgh'
+    # )
+
+    # def fgh(self, product: Product, co:Customer):
+    #     return concat(product.title,co.first_name)
+
     price_with_tax = serializers.SerializerMethodField(
         method_name='calculate_tax')
 
-    def calculate_tax(self, product: Product):
-        return product.unit_price * Decimal(1.1)
 
+    # price_after_the_first_tax = serializers.SerializerMethodField(
+    #     method_name='second_calculate')
+
+    def calculate_tax(self, product: Product):
+        return product.unit_price * Decimal(0.1)
+
+    # def second_calculate(self, order: OrderItem):
+    #     return ProductSerializer.price_with_tax + Decimal(0.2)
+    #
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -77,6 +93,8 @@ class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
         fields = ['id', 'items', 'total_price']
+
+
 
 
 class AddCartItemSerializer(serializers.ModelSerializer):
@@ -121,11 +139,12 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['id', 'user_id', 'phone', 'birth_date', 'membership']
+        fields = ['id', 'user_id', 'phone', 'birth_date', 'membership', 'first_name']
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = SimpleProductSerializer()
+    inv = Product
 
     class Meta:
         model = OrderItem
@@ -176,6 +195,7 @@ class CreateOrderSerializer(serializers.Serializer):
                     quantity=item.quantity
                 ) for item in cart_items
             ]
+
             OrderItem.objects.bulk_create(order_items)
 
             Cart.objects.filter(pk=cart_id).delete()

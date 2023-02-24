@@ -1,3 +1,6 @@
+from multiprocessing import Value
+
+from django.http import HttpResponse
 from store.permissions import FullDjangoModelPermissions, IsAdminOrReadOnly, ViewCustomerHistoryPermission
 from store.pagination import DefaultPagination
 from django.db.models.aggregates import Count
@@ -6,10 +9,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action, permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin, RetrieveModelMixin, UpdateModelMixin
+from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.permissions import AllowAny, DjangoModelPermissions, DjangoModelPermissionsOrAnonReadOnly, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
-from rest_framework import status
+from rest_framework import status, renderers, viewsets
 from .filters import ProductFilter
 from .models import Cart, CartItem, Collection, Customer, Order, OrderItem, Product, Review, ProductImage
 from .serializers import AddCartItemSerializer, CartItemSerializer, CartSerializer, CollectionSerializer, \
@@ -27,7 +30,6 @@ class ProductViewSet(ModelViewSet):
     search_fields = ['title', 'description']
     ordering_fields = ['unit_price', 'last_update']
 
-
     def get_serializer_context(self):
         return {'request': self.request}
 
@@ -42,7 +44,7 @@ class CollectionViewSet(ModelViewSet):
     queryset = Collection.objects.annotate(
         products_count=Count('products')).all()
     serializer_class = CollectionSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def destroy(self, request, *args, **kwargs):
         if Product.objects.filter(collection_id=kwargs['pk']):
@@ -126,6 +128,7 @@ class OrderViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
         serializer = OrderSerializer(order)
+
         return Response(serializer.data)
 
     def get_serializer_class(self):
